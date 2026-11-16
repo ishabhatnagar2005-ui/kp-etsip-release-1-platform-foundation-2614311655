@@ -6,6 +6,7 @@ import { PortfolioDetail, PortfolioForm, PortfolioList } from './portfolios/Port
 import { ApplicationDetail, ApplicationForm, ApplicationList } from './applications/Applications';
 import Dashboard from './dashboard/Dashboard';
 import Admin from './admin/Admin';
+import Reports from './reports/Reports';
 import { getMe, getToken, signOut } from './api';
 import type { User } from './types';
 
@@ -32,7 +33,7 @@ export default function App() {
     <BrowserRouter>
       <header className="header">
         <div className="header-inner"><span className="brand">KP ETSIP <span>Platform Foundation</span></span>{user && <button className="header-button" onClick={logout}>Sign out</button>}</div>
-        {user && !user.mustChangePassword && <nav className="main-nav" aria-label="Main navigation"><Link to="/dashboard">Dashboard</Link><Link to="/portfolios">Portfolios</Link><Link to="/applications">Applications</Link>{((user.role === 'Administrator' && user.effectivePermissions?.includes('administer')) || (['Administrator', 'Auditor'].includes(user.role) && user.effectivePermissions?.includes('view'))) && <Link to="/admin">Administration</Link>}<Link to="/profile">My Profile</Link></nav>}
+        {user && !user.mustChangePassword && <nav className="main-nav" aria-label="Main navigation"><Link to="/dashboard">Dashboard</Link><Link to="/portfolios">Portfolios</Link><Link to="/applications">Applications</Link><Link to="/reports">Reports</Link>{((user.role === 'Administrator' && user.effectivePermissions?.includes('administer')) || (['Administrator', 'Auditor'].includes(user.role) && user.effectivePermissions?.includes('view'))) && <Link to="/admin">Administration</Link>}<Link to="/profile">My Profile</Link></nav>}
       </header>
       {notice && <p className="page" role="status">{notice}</p>}
       <Routes>
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/applications/new" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <ApplicationForm user={user} />} />
         <Route path="/applications/:id" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <ApplicationDetail user={user} />} />
         <Route path="/applications/:id/edit" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <ApplicationForm user={user} edit />} />
+        <Route path="/reports" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <Reports user={user} />} />
         <Route path="/admin" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <Admin user={user} />} />
         <Route path="*" element={<Navigate to={user ? landingPage(user) : '/login'} replace />} />
       </Routes>

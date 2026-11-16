@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { clearToken, getToken } from '../api';
 import type { Application, ApplicationInput, Page, Portfolio, User } from '../types';
+import { canExport, downloadReport } from '../reports/Reports';
 
 const base = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -51,6 +52,8 @@ export function ApplicationList({ user }: { user: User }) {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [exportError, setExportError] = useState('');
+  const [exporting, setExporting] = useState(false);
   const search = params.toString();
   useEffect(() => {
     let active = true;
@@ -68,6 +71,13 @@ export function ApplicationList({ user }: { user: User }) {
     if (key !== 'offset') next.delete('offset');
     setParams(next);
   }
+  async function exportApplications() {
+    setExporting(true);
+    setExportError('');
+    try { await downloadReport('applications', params); }
+    catch (err) { setExportError(message(err)); }
+    finally { setExporting(false); }
+  }
   return (
     <main className="page">
       <div className="portfolio-heading">
@@ -76,7 +86,14 @@ export function ApplicationList({ user }: { user: User }) {
           <h1>Applications</h1>
           <p>Explore application quality and risk across portfolios.</p>
         </div>
-        {canWrite(user) && <Link className="action-link" to="/applications/new">Create application</Link>}
+        <div className="actions">
+          {canExport(user) && (
+            <button type="button" disabled={exporting} onClick={exportApplications}>
+              {exporting ? 'Exporting…' : 'Export CSV'}
+            </button>
+          )}
+          {canWrite(user) && <Link className="action-link" to="/applications/new">Create application</Link>}
+        </div>
       </div>
       <div className="filters" aria-label="Application filters">
         <div>
@@ -100,6 +117,7 @@ export function ApplicationList({ user }: { user: User }) {
           </div>
         ))}
       </div>
+      {exportError && <p className="error" role="alert">{exportError}</p>}
       {loading && <p role="status">Loading applications…</p>}
       {error && <p className="error" role="alert">{error}</p>}
       {!loading && !error && page && (page.items.length ? (

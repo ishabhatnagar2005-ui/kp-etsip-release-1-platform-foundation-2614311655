@@ -8,6 +8,7 @@ from app.portfolios.router import router as portfolio_router
 from app.applications.router import router as application_router
 from app.dashboard.router import router as dashboard_router
 from app.admin.router import router as admin_router
+from app.reports.router import router as reports_router
 from app.core.config import Settings
 from app.core.seed import seed_database
 
@@ -45,3 +46,4 @@ app.include_router(portfolio_router)
 app.include_router(application_router)
 app.include_router(dashboard_router)
 app.include_router(admin_router)
+app.include_router(reports_router)
