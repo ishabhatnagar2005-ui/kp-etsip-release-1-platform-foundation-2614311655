@@ -47,3 +47,11 @@ textarea:focus-visible, a:focus-visible { outline:3px solid var(--primary-contai
 @media(max-width:767px) { .main-nav { padding:0 16px 16px; }.portfolio-heading { flex-direction:column; } }
 .application-field { display:flex; flex-direction:column; gap:8px; }
 .application-detail-row { display:contents; }
+.dashboard-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin:32px 0; }
+.dashboard-card { border:1px solid var(--card-border); border-radius:8px; background:var(--background-white); padding:24px; }
+.dashboard-card h2 { font-size:14px; line-height:20px; color:var(--on-surface-variant); }
+.dashboard-card p { color:var(--forest-teal); font-size:32px; line-height:40px; font-weight:700; font-variant-numeric:tabular-nums; }
+.dashboard-breakdown { margin-top:40px; }
+.dashboard-breakdown li { display:grid; gap:8px; padding:16px 0; border-bottom:1px solid var(--outline-variant); }
+.dashboard-bar { height:8px; background:var(--surface-container-high); border-radius:4px; overflow:hidden; }
+.dashboard-bar span { display:block; height:100%; background:var(--secondary); }

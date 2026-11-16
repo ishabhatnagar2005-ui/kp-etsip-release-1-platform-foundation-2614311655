@@ -6,6 +6,7 @@ from pymongo import AsyncMongoClient
 from app.auth.router import router
 from app.portfolios.router import router as portfolio_router
 from app.applications.router import router as application_router
+from app.dashboard.router import router as dashboard_router
 from app.core.config import Settings
 from app.core.seed import seed_database
 
@@ -38,3 +39,4 @@ app.add_middleware(CORSMiddleware, allow_origins=[origin.strip() for origin in S
 app.include_router(router)
 app.include_router(portfolio_router)
 app.include_router(application_router)
+app.include_router(dashboard_router)

@@ -54,3 +54,22 @@ export interface Application extends ApplicationInput {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface DashboardPortfolio {
+  id: string;
+  name: string;
+  applicationCount: number;
+  qualityScore: number | null;
+  applicationsAtRisk: number;
+}
+
+export interface DashboardMetrics {
+  enterpriseQualityScore: number | null;
+  applicationHealthScore: number | null;
+  automationMaturityScore: number | null;
+  openCriticalDefects: number;
+  applicationsAtRisk: number;
+  totalApplications: number;
+  totalPortfolios: number;
+  portfolios: DashboardPortfolio[];
+}
