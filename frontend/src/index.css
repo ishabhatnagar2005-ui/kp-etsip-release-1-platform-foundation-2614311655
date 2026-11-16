@@ -55,3 +55,7 @@ textarea:focus-visible, a:focus-visible { outline:3px solid var(--primary-contai
 .dashboard-breakdown li { display:grid; gap:8px; padding:16px 0; border-bottom:1px solid var(--outline-variant); }
 .dashboard-bar { height:8px; background:var(--surface-container-high); border-radius:4px; overflow:hidden; }
 .dashboard-bar span { display:block; height:100%; background:var(--secondary); }
+.admin-check { display:block; margin:8px 0; }
+.main-nav { flex-wrap:wrap; }
+fieldset { border:1px solid var(--outline-variant); padding:16px; margin-top:16px; }
+fieldset legend { font-weight:600; }

@@ -6,7 +6,17 @@ export interface User {
   portfolioAccess: string[];
   defaultLandingPage: 'dashboard' | 'applications' | null;
   mustChangePassword: boolean;
+  effectivePermissions?: string[];
 }
+
+export interface AdminUser {
+  id: string; name: string; email: string; role: string; portfolioAccess: string[];
+  status: 'Active' | 'Inactive'; managerName: string | null; vendorIndicator: boolean;
+  defaultLandingPage: 'dashboard' | 'applications' | null; authSource: string;
+  lastLogin: string | null; createdAt: string; updatedAt: string; mustChangePassword: boolean;
+}
+export interface AdminRole { id: string; name: string; description: string; permissions: string[]; createdAt: string; updatedAt: string }
+export interface AuditEvent { id: string; timestamp: string; userId: string | null; userName: string; action: string; entityType: string; entityId: string | null; details: string }
 
 export interface LoginResponse { token: string; user: User }
 

@@ -55,6 +55,8 @@ async def current_user(request: Request, credentials: Annotated[HTTPAuthorizatio
     user = await request.app.state.db.users.find_one({"_id": ObjectId(subject), "status": "Active"})
     if not user or user.get("role") not in ROLES or claims.get("role") != user["role"] or claims.get("ver") != user.get("tokenVersion", 0):
         raise unauthorized
+    role = await request.app.state.db.roles.find_one({"name": user["role"]})
+    user["effectivePermissions"] = sorted(ROLES[user["role"]].intersection(role.get("permissions", []) if role else []))
     return user
 
 

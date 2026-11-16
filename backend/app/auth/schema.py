@@ -19,6 +19,7 @@ class UserResponse(BaseModel):
     portfolioAccess: list[str]
     defaultLandingPage: Literal["dashboard", "applications"] | None
     mustChangePassword: bool
+    effectivePermissions: list[str] = Field(default_factory=list)
 
 
 class LoginResponse(BaseModel):

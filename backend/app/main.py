@@ -7,6 +7,7 @@ from app.auth.router import router
 from app.portfolios.router import router as portfolio_router
 from app.applications.router import router as application_router
 from app.dashboard.router import router as dashboard_router
+from app.admin.router import router as admin_router
 from app.core.config import Settings
 from app.core.seed import seed_database
 
@@ -22,6 +23,9 @@ async def lifespan(app: FastAPI):
         await client.admin.command("ping")
         await db.users.create_index("email", unique=True)
         await db.roles.create_index("name", unique=True)
+        await db.audit_logs.create_index([("timestamp", -1), ("_id", -1)])
+        await db.audit_logs.create_index([("userId", 1), ("timestamp", -1)])
+        await db.audit_logs.create_index([("action", 1), ("timestamp", -1)])
         await db.portfolios.create_index("name", unique=True)
         await db.applications.create_index("portfolioId")
         await db.applications.create_index("name", unique=True)
@@ -40,3 +44,4 @@ app.include_router(router)
 app.include_router(portfolio_router)
 app.include_router(application_router)
 app.include_router(dashboard_router)
+app.include_router(admin_router)
