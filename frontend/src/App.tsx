@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom';
 import Login from './auth/Login';
 import Profile from './auth/Profile';
+import { PortfolioDetail, PortfolioForm, PortfolioList } from './portfolios/Portfolios';
 import { getMe, getToken, signOut } from './api';
 import type { User } from './types';
 
@@ -22,11 +23,16 @@ export default function App() {
     <BrowserRouter>
       <header className="header">
         <div className="header-inner"><span className="brand">KP ETSIP <span>Platform Foundation</span></span>{user && <button className="header-button" onClick={logout}>Sign out</button>}</div>
+        {user && !user.mustChangePassword && <nav className="main-nav" aria-label="Main navigation"><Link to="/portfolios">Portfolios</Link><Link to="/profile">My Profile</Link></nav>}
       </header>
       {notice && <p className="page" role="status">{notice}</p>}
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/profile" replace /> : <Login onLogin={setUser} />} />
         <Route path="/profile" element={user ? <Profile user={user} onUpdate={setUser} onSignedOut={() => { setUser(null); setNotice('Password changed. Please sign in again.'); }} /> : <Navigate to="/login" replace />} />
+        <Route path="/portfolios" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <PortfolioList user={user} />} />
+        <Route path="/portfolios/new" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <PortfolioForm user={user} />} />
+        <Route path="/portfolios/:id" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <PortfolioDetail user={user} />} />
+        <Route path="/portfolios/:id/edit" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <PortfolioForm user={user} edit />} />
         <Route path="*" element={<Navigate to={user ? '/profile' : '/login'} replace />} />
       </Routes>
     </BrowserRouter>

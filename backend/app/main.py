@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import AsyncMongoClient
 from app.auth.router import router
+from app.portfolios.router import router as portfolio_router
 from app.core.config import Settings
 from app.core.seed import seed_database
 
@@ -19,6 +20,8 @@ async def lifespan(app: FastAPI):
         await client.admin.command("ping")
         await db.users.create_index("email", unique=True)
         await db.roles.create_index("name", unique=True)
+        await db.portfolios.create_index("name", unique=True)
+        await db.applications.create_index("portfolioId")
         if settings.seed_on_startup:
             await seed_database(db, settings)
         app.state.db = db
@@ -29,5 +32,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="KP ETSIP Identity API", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=[origin.strip() for origin in Settings().cors_origins.split(",") if origin.strip()], allow_methods=["GET", "POST", "PUT"], allow_headers=["Authorization", "Content-Type"])
+app.add_middleware(CORSMiddleware, allow_origins=[origin.strip() for origin in Settings().cors_origins.split(",") if origin.strip()], allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Authorization", "Content-Type"])
 app.include_router(router)
+app.include_router(portfolio_router)
