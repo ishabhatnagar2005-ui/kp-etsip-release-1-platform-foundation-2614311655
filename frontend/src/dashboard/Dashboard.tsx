@@ -72,18 +72,32 @@ export default function Dashboard() {
       <div className="filters" aria-label="Dashboard filters">
         <div>
           <label htmlFor="dashboard-portfolio">Portfolio</label>
-          <select id="dashboard-portfolio" value={params.get('portfolioId') ?? ''} onChange={event => filter('portfolioId', event.target.value)}>
+          <select
+            id="dashboard-portfolio"
+            value={params.get('portfolioId') ?? ''}
+            onChange={event => filter('portfolioId', event.target.value)}
+          >
             <option value="">All portfolios</option>
-            {options.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+            {options.map(item => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
           </select>
         </div>
         <div>
           <label htmlFor="dashboard-area">Product area</label>
-          <input id="dashboard-area" value={params.get('productArea') ?? ''} onChange={event => filter('productArea', event.target.value)} />
+          <input
+            id="dashboard-area"
+            value={params.get('productArea') ?? ''}
+            onChange={event => filter('productArea', event.target.value)}
+          />
         </div>
         <div>
           <label htmlFor="dashboard-risk">Risk level</label>
-          <select id="dashboard-risk" value={params.get('riskLevel') ?? ''} onChange={event => filter('riskLevel', event.target.value)}>
+          <select
+            id="dashboard-risk"
+            value={params.get('riskLevel') ?? ''}
+            onChange={event => filter('riskLevel', event.target.value)}
+          >
             <option value="">All risk levels</option>
             <option value="Low">Low</option>
             <option value="Medium">Medium</option>
@@ -116,8 +130,12 @@ export default function Dashboard() {
               {data.portfolios.map(item => (
                 <li key={item.id}>
                   <Link to={`/portfolios/${item.id}`}>{item.name}</Link>
-                  <span>{item.qualityScore === null ? 'No score' : `${item.qualityScore} / 100`} · {item.applicationCount} applications</span>
-                  <div className="dashboard-bar" aria-hidden="true"><span style={{ width: `${item.qualityScore ?? 0}%` }} /></div>
+                  <span>
+                    {item.qualityScore === null ? 'No score' : `${item.qualityScore} / 100`} · {item.applicationCount} applications
+                  </span>
+                  <div className="dashboard-bar" aria-hidden="true">
+                    <span style={{ width: `${item.qualityScore ?? 0}%` }} />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -128,7 +146,9 @@ export default function Dashboard() {
               {data.portfolios.map(item => (
                 <li key={item.id}>
                   <span>{item.name}: {item.applicationsAtRisk} high-risk applications</span>
-                  <div className="dashboard-bar" aria-hidden="true"><span style={{ width: `${item.applicationCount ? 100 * item.applicationsAtRisk / item.applicationCount : 0}%` }} /></div>
+                  <div className="dashboard-bar" aria-hidden="true">
+                    <span style={{ width: `${item.applicationCount ? 100 * item.applicationsAtRisk / item.applicationCount : 0}%` }} />
+                  </div>
                 </li>
               ))}
             </ul>

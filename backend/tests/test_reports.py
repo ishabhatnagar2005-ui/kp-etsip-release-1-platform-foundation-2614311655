@@ -63,11 +63,17 @@ def test_tables_filters_and_pagination(context):
     """Return both matching table types with correct aggregates and pages."""
     client, _, alpha, _ = context
     auth = login(client)
-    page = client.get('/api/reports/applications', headers=auth, params={'limit': 1, 'offset': 1}).json()
+    response = client.get('/api/reports/applications', headers=auth, params={'limit': 1, 'offset': 1})
+    assert response.status_code == 200
+    page = response.json()
     assert page['total'] == 2 and page['items'][0]['name'] == 'Second'
-    result = client.get('/api/reports/applications', headers=auth, params={'search': 'irst', 'portfolioId': alpha, 'criticality': 'High', 'riskLevel': 'High', 'lifecycleStatus': 'Active'}).json()
+    response = client.get('/api/reports/applications', headers=auth, params={'search': 'irst', 'portfolioId': alpha, 'criticality': 'High', 'riskLevel': 'High', 'lifecycleStatus': 'Active'})
+    assert response.status_code == 200
+    result = response.json()
     assert [row['name'] for row in result['items']] == ['First']
-    portfolios = client.get('/api/reports/portfolios', headers=auth, params={'status': 'Active', 'productArea': 'One', 'search': 'lph'}).json()
+    response = client.get('/api/reports/portfolios', headers=auth, params={'status': 'Active', 'productArea': 'One', 'search': 'lph'})
+    assert response.status_code == 200
+    portfolios = response.json()
     assert portfolios['total'] == 1
     assert portfolios['items'][0]['applicationCount'] == 1 and portfolios['items'][0]['qualityScore'] == 80
 
@@ -85,6 +91,7 @@ def test_csv_full_columns_audit_and_filter_parity(context):
     assert applications[0]['openDefects'] == '0' and applications[0]['unitTestCoverage'] == '50'
     assert {'id', 'createdAt', 'updatedAt', 'businessOwner', 'repositoryLink'} <= applications[0].keys()
     response = client.get('/api/reports/portfolios', headers=auth, params={'format': 'csv', 'status': 'Active'})
+    assert response.status_code == 200
     portfolio = rows(response)[0]
     assert portfolio['name'] == 'Alpha' and portfolio['owner'] == "'=formula"
     assert portfolio['applicationCount'] == '1' and portfolio['qualityScore'] == '80'
@@ -99,36 +106,54 @@ def test_scope_for_tables_and_exports(context):
     client, db, alpha, beta = context
     auth = login(client, 'leader')
     for kind in ('applications', 'portfolios'):
-        assert len(client.get('/api/reports/' + kind, headers=auth).json()['items']) == 1
-        assert len(rows(client.get('/api/reports/' + kind, headers=auth, params={'format': 'csv'}))) == 1
-    assert client.get('/api/reports/applications', headers=auth, params={'portfolioId': beta}).json()['total'] == 0
-    assert rows(client.get('/api/reports/applications', headers=auth, params={'portfolioId': beta, 'format': 'csv'})) == []
+        response = client.get('/api/reports/' + kind, headers=auth)
+        assert response.status_code == 200
+        assert len(response.json()['items']) == 1
+        response = client.get('/api/reports/' + kind, headers=auth, params={'format': 'csv'})
+        assert response.status_code == 200
+        assert len(rows(response)) == 1
+    response = client.get('/api/reports/applications', headers=auth, params={'portfolioId': beta})
+    assert response.status_code == 200
+    assert response.json()['total'] == 0
+    response = client.get('/api/reports/applications', headers=auth, params={'portfolioId': beta, 'format': 'csv'})
+    assert response.status_code == 200
+    assert rows(response) == []
     db.users.update_one({'role': 'Portfolio Leader'}, {'$set': {'portfolioAccess': []}})
-    assert client.get('/api/reports/portfolios', headers=auth).json()['total'] == 0
-    assert rows(client.get('/api/reports/applications', headers=auth, params={'format': 'csv'})) == []
+    response = client.get('/api/reports/portfolios', headers=auth)
+    assert response.status_code == 200
+    assert response.json()['total'] == 0
+    response = client.get('/api/reports/applications', headers=auth, params={'format': 'csv'})
+    assert response.status_code == 200
+    assert rows(response) == []
 
 
 def test_permissions_and_validation(context):
     """Enforce separate stored view and export permissions and validate inputs."""
     client, db, _, _ = context
+    readonly = login(client, 'readonly')
+    auth = login(client)
     for kind in ('applications', 'portfolios'):
         path = '/api/reports/' + kind
-        assert client.get(path).status_code == 401
-        readonly = login(client, 'readonly')
+        for format in ('json', 'csv'):
+            params = {'format': format}
+            assert client.get(path, params=params).status_code == 401
+            assert client.get(path, headers={'Authorization': 'Bearer invalid-token'}, params=params).status_code == 401
         assert client.get(path, headers=readonly).status_code == 200
         db.roles.update_one({'name': 'Read Only'}, {'$addToSet': {'permissions': 'export'}})
         assert client.get(path, headers=readonly, params={'format': 'csv'}).status_code == 403
-        auth = login(client)
         assert client.get(path, headers=auth, params={'format': 'xlsx'}).status_code == 422
-        assert client.get(path, headers=auth, params={'unexpected': 'x'}).status_code == 422
-        assert client.get(path, headers=auth, params={'limit': 101}).status_code == 422
-    assert client.get('/api/reports/applications', headers=auth, params={'riskLevel': 'Extreme'}).status_code == 422
-    assert client.get('/api/reports/portfolios', headers=auth, params={'status': 'Invalid'}).status_code == 422
+        invalid_filter = {'riskLevel': 'Extreme'} if kind == 'applications' else {'status': 'Invalid'}
+        for format in ('json', 'csv'):
+            for invalid in ({'unexpected': 'x'}, {'limit': 101}, invalid_filter):
+                assert client.get(path, headers=auth, params={'format': format, **invalid}).status_code == 422
     db.roles.update_one({'name': 'Executive'}, {'$pull': {'permissions': 'view'}})
-    assert client.get('/api/reports/applications', headers=auth).status_code == 403
-    assert client.get('/api/reports/applications', headers=auth, params={'format': 'csv'}).status_code == 200
+    for kind in ('applications', 'portfolios'):
+        path = '/api/reports/' + kind
+        assert client.get(path, headers=auth).status_code == 403
+        assert client.get(path, headers=auth, params={'format': 'csv'}).status_code == 200
     db.roles.update_one({'name': 'Executive'}, {'$pull': {'permissions': 'export'}})
-    assert client.get('/api/reports/portfolios', headers=auth, params={'format': 'csv'}).status_code == 403
+    for kind in ('applications', 'portfolios'):
+        assert client.get('/api/reports/' + kind, headers=auth, params={'format': 'csv'}).status_code == 403
 
 
 def test_export_spans_multiple_pages(context):

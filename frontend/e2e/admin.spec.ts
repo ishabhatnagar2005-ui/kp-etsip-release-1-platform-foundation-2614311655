@@ -64,24 +64,33 @@ test('administrator edits a role and sees the persisted definition', async ({ pa
   expect(listResponse.status()).toBe(200);
   const original = (await listResponse.json()).items.find((role: { name: string }) => role.name === 'Engineer');
   expect(original).toBeTruthy();
-  const description = `E2E role ${Date.now()}`;
   await page.getByRole('button', { name: 'Engineer' }).click();
+  const permission = page.getByRole('checkbox', { name: 'export', exact: true });
+  const originallyAllowed = original.permissions.includes('export');
+  let savedChange = false;
   try {
-    await page.getByLabel('Description').fill(description);
+    await permission.setChecked(!originallyAllowed);
     const saved = page.waitForResponse(response => response.url().endsWith(`/api/roles/${original.id}`) && response.request().method() === 'PUT');
     await page.getByRole('button', { name: 'Save role' }).click();
     const response = await saved;
     expect(response.status()).toBe(200);
-    expect((await response.json()).description).toBe(description);
+    savedChange = true;
+    expect((await response.json()).permissions.includes('export')).toBe(!originallyAllowed);
     await expect(page.getByText('Role saved.')).toBeVisible();
     await page.reload();
     await page.getByRole('button', { name: 'Engineer' }).click();
-    await expect(page.getByLabel('Description')).toHaveValue(description);
+    await expect(permission).toBeChecked({ checked: !originallyAllowed });
   } finally {
-    await page.getByLabel('Description').fill(original.description);
-    const restored = page.waitForResponse(response => response.url().endsWith(`/api/roles/${original.id}`) && response.request().method() === 'PUT');
-    await page.getByRole('button', { name: 'Save role' }).click();
-    expect((await restored).status()).toBe(200);
+    if (savedChange) {
+      // The form remains selected after save and is reopened after the reload.
+      if (!await permission.isVisible()) await page.getByRole('button', { name: 'Engineer' }).click();
+      await permission.setChecked(originallyAllowed);
+      const restored = page.waitForResponse(response => response.url().endsWith(`/api/roles/${original.id}`) && response.request().method() === 'PUT');
+      await page.getByRole('button', { name: 'Save role' }).click();
+      const response = await restored;
+      expect(response.status()).toBe(200);
+      expect((await response.json()).permissions.sort()).toEqual([...original.permissions].sort());
+    }
   }
   expect(errors).toEqual([]);
 });

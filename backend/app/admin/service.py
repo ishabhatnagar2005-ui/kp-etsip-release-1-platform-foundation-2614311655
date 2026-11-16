@@ -49,6 +49,10 @@ async def update_user(repo: AdminRepository, actor: dict, identifier: str, body:
             raise HTTPException(409, 'At least one active administrator is required')
         role_changed = fields.get('role', doc['role']) != doc['role']
         revoke = role_changed or fields.get('status', doc['status']) != doc['status']
+        # A lease is not a transaction or a fencing token. A worker paused for
+        # longer than the lease after this check can race a recovered owner.
+        if not await repo.renew_admin_lock(lock):
+            raise HTTPException(409, 'Account change lease expired; retry')
         try:
             updated = await repo.update('users', doc, fields, revoke=revoke)
         except DuplicateKeyError as exc:

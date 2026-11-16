@@ -4,6 +4,10 @@ from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 from app.auth.repository import now
 
+# Account changes are normally short. Lease recovery assumes a worker cannot
+# pause longer than this duration between its final lease check and user write.
+ADMIN_LOCK_LEASE_SECONDS = 600
+
 
 def identifier(value: str) -> ObjectId | None:
     """Convert a valid external identifier to Mongo's key type."""
@@ -57,17 +61,29 @@ class AdminRepository:
         return await self.db.users.count_documents({'role': 'Administrator', 'status': 'Active'})
 
     async def acquire_admin_lock(self, owner: str) -> bool:
-        """Acquire a fail-closed database-wide lock for admin account changes."""
+        """Acquire a lease using database time; legacy undated locks fail closed."""
         result = await self.db.roles.find_one_and_update(
-            {'name': 'Administrator', 'adminLockOwner': {'$exists': False}},
-            {'$set': {'adminLockOwner': owner}},
+            {'name': 'Administrator', '$or': [
+                {'adminLockOwner': {'$exists': False}},
+                {'adminLockExpiresAt': {'$type': 'date'}, '$expr': {'$lte': ['$adminLockExpiresAt', '$$NOW']}},
+            ]},
+            [{'$set': {'adminLockOwner': {'$literal': owner}, 'adminLockExpiresAt': {'$dateAdd': {'startDate': '$$NOW', 'unit': 'second', 'amount': ADMIN_LOCK_LEASE_SECONDS}}}}],
+            return_document=ReturnDocument.AFTER,
+        )
+        return result is not None
+
+    async def renew_admin_lock(self, owner: str) -> bool:
+        """Renew only an unexpired lease held by this operation."""
+        result = await self.db.roles.find_one_and_update(
+            {'name': 'Administrator', 'adminLockOwner': owner, 'adminLockExpiresAt': {'$type': 'date'}, '$expr': {'$gt': ['$adminLockExpiresAt', '$$NOW']}},
+            [{'$set': {'adminLockExpiresAt': {'$dateAdd': {'startDate': '$$NOW', 'unit': 'second', 'amount': ADMIN_LOCK_LEASE_SECONDS}}}}],
             return_document=ReturnDocument.AFTER,
         )
         return result is not None
 
     async def release_admin_lock(self, owner: str) -> None:
         """Release only the lock held by this operation."""
-        await self.db.roles.update_one({'name': 'Administrator', 'adminLockOwner': owner}, {'$unset': {'adminLockOwner': ''}})
+        await self.db.roles.update_one({'name': 'Administrator', 'adminLockOwner': owner}, {'$unset': {'adminLockOwner': '', 'adminLockExpiresAt': ''}})
 
     async def audit(self, actor: dict, action: str, entity: str, entity_id: str | None, details: str) -> None:
         """Append an event containing no request payload or credentials."""

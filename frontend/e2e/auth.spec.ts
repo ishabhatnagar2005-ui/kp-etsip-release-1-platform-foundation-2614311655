@@ -9,7 +9,10 @@ test('sign in, save a preference, and sign out', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email address').fill('engineer@ketsip.local');
   await page.getByLabel('Password').fill(password);
+  const signedIn = page.waitForResponse(response => response.url().endsWith('/api/auth/login') && response.request().method() === 'POST');
   await page.getByRole('button', { name: 'Sign in' }).click();
+  expect((await signedIn).status()).toBe(200);
+  await page.getByRole('link', { name: 'My Profile' }).click();
   await expect(page.getByText('engineer@ketsip.local')).toBeVisible();
   await page.getByLabel('Default landing page').selectOption('applications');
   await page.getByRole('button', { name: 'Save preference' }).click();

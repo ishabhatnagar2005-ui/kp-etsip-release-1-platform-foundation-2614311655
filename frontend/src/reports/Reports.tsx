@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { clearToken, getToken } from '../api';
 import type { Application, Page, Portfolio, User } from '../types';
+import { fetchPortfolioOptions } from '../portfolioOptions';
 
 const base = import.meta.env.VITE_API_BASE_URL ?? '';
 type Kind = 'applications' | 'portfolios';
@@ -46,6 +47,8 @@ export default function Reports({ user }: { user: User }) {
   const kind: Kind = params.get('tab') === 'portfolios' ? 'portfolios' : 'applications';
   const [page, setPage] = useState<Page<Application | Portfolio> | null>(null);
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [portfolioError, setPortfolioError] = useState('');
+  const [portfoliosLoading, setPortfoliosLoading] = useState(true);
   const [error, setError] = useState('');
   const [exportError, setExportError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -53,6 +56,7 @@ export default function Reports({ user }: { user: User }) {
   const query = new URLSearchParams(params);
   query.delete('tab');
   const search = query.toString();
+  const portfolioScope = JSON.stringify([user.id, user.role, user.portfolioAccess, user.effectivePermissions]);
 
   useEffect(() => {
     let active = true;
@@ -68,12 +72,23 @@ export default function Reports({ user }: { user: User }) {
 
   useEffect(() => {
     let active = true;
-    reportRequest('/portfolios?limit=100')
-      .then(response => response.json() as Promise<Page<Portfolio>>)
-      .then(result => { if (active) setPortfolios(result.items); })
-      .catch(() => { if (active) setPortfolios([]); });
+    setPortfolios([]);
+    setPortfolioError('');
+    setPortfoliosLoading(true);
+    fetchPortfolioOptions(async (path) => {
+      const response = await reportRequest(path);
+      return response.json() as Promise<Page<Portfolio>>;
+    })
+      .then(result => { if (active) setPortfolios(result); })
+      .catch(err => {
+        if (active) {
+          setPortfolios([]);
+          setPortfolioError(err instanceof Error ? err.message : 'Could not load portfolios.');
+        }
+      })
+      .finally(() => { if (active) setPortfoliosLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [portfolioScope]);
 
   function change(key: string, value: string) {
     const next = new URLSearchParams(params);
@@ -99,28 +114,49 @@ export default function Reports({ user }: { user: User }) {
           <p>Review and export visible inventory.</p>
         </div>
         {canExport(user) && (
-          <button type="button" disabled={busy} onClick={download}>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={download}
+          >
             {busy ? 'Exporting…' : 'Export CSV'}
           </button>
         )}
       </div>
       <nav className="actions" aria-label="Report types">
-        <Link to="/reports?tab=applications" aria-current={kind === 'applications' ? 'page' : undefined}>Application Report</Link>
-        <Link to="/reports?tab=portfolios" aria-current={kind === 'portfolios' ? 'page' : undefined}>Portfolio Report</Link>
+        <Link to="/reports?tab=applications" aria-current={kind === 'applications' ? 'page' : undefined}>
+          Application Report
+        </Link>
+        <Link to="/reports?tab=portfolios" aria-current={kind === 'portfolios' ? 'page' : undefined}>
+          Portfolio Report
+        </Link>
       </nav>
       <h2>{kind === 'applications' ? 'Application Report' : 'Portfolio Report'}</h2>
       <div className="filters" aria-label="Report filters">
         <div>
           <label htmlFor="report-search">Search</label>
-          <input id="report-search" value={params.get('search') ?? ''} onChange={event => change('search', event.target.value)} />
+          <input
+            id="report-search"
+            value={params.get('search') ?? ''}
+            onChange={event => change('search', event.target.value)}
+          />
         </div>
         {kind === 'applications' ? (
           <>
             <div>
               <label htmlFor="report-portfolio">Portfolio</label>
-              <select id="report-portfolio" value={params.get('portfolioId') ?? ''} onChange={event => change('portfolioId', event.target.value)}>
+              <select
+                id="report-portfolio"
+                disabled={portfoliosLoading || Boolean(portfolioError)}
+                value={params.get('portfolioId') ?? ''}
+                onChange={event => change('portfolioId', event.target.value)}
+              >
                 <option value="">All portfolios</option>
-                {portfolios.map(portfolio => <option key={portfolio.id} value={portfolio.id}>{portfolio.name}</option>)}
+                {portfolios.map(portfolio => (
+                  <option key={portfolio.id} value={portfolio.id}>
+                    {portfolio.name}
+                  </option>
+                ))}
               </select>
             </div>
             {([
@@ -130,9 +166,15 @@ export default function Reports({ user }: { user: User }) {
             ] as const).map(([key, label, options]) => (
               <div key={key}>
                 <label htmlFor={`report-${key}`}>{label}</label>
-                <select id={`report-${key}`} value={params.get(key) ?? ''} onChange={event => change(key, event.target.value)}>
+                <select
+                  id={`report-${key}`}
+                  value={params.get(key) ?? ''}
+                  onChange={event => change(key, event.target.value)}
+                >
                   <option value="">All</option>
-                  {options.map(option => <option key={option}>{option}</option>)}
+                  {options.map(option => (
+                    <option key={option}>{option}</option>
+                  ))}
                 </select>
               </div>
             ))}
@@ -141,7 +183,11 @@ export default function Reports({ user }: { user: User }) {
           <>
             <div>
               <label htmlFor="report-status">Status</label>
-              <select id="report-status" value={params.get('status') ?? ''} onChange={event => change('status', event.target.value)}>
+              <select
+                id="report-status"
+                value={params.get('status') ?? ''}
+                onChange={event => change('status', event.target.value)}
+              >
                 <option value="">All</option>
                 <option>Active</option>
                 <option>Archived</option>
@@ -149,12 +195,19 @@ export default function Reports({ user }: { user: User }) {
             </div>
             <div>
               <label htmlFor="report-product">Product area</label>
-              <input id="report-product" value={params.get('productArea') ?? ''} onChange={event => change('productArea', event.target.value)} />
+              <input
+                id="report-product"
+                value={params.get('productArea') ?? ''}
+                onChange={event => change('productArea', event.target.value)}
+              />
             </div>
           </>
         )}
       </div>
       {loading && <p role="status">Loading report…</p>}
+      {portfolioError && (
+        <p className="error" role="alert">Could not load portfolios: {portfolioError}</p>
+      )}
       {error && <p className="error" role="alert">{error}</p>}
       {exportError && <p className="error" role="alert">{exportError}</p>}
       {!loading && !error && page && (page.items.length ? (
@@ -163,14 +216,23 @@ export default function Reports({ user }: { user: User }) {
             <table>
               <thead>
                 <tr>
-                  {(kind === 'applications' ? ['Name', 'Portfolio', 'Criticality', 'Tier', 'Lifecycle status', 'Health score', 'Automation coverage %', 'Open critical defects', 'Risk level'] : ['Name', 'Owner', 'Product area', 'Applications', 'Quality score', 'Status']).map(label => <th key={label} scope="col">{label}</th>)}
+                  {(kind === 'applications'
+                    ? ['Name', 'Portfolio', 'Criticality', 'Tier', 'Lifecycle status', 'Health score', 'Automation coverage %', 'Open critical defects', 'Risk level']
+                    : ['Name', 'Owner', 'Product area', 'Applications', 'Quality score', 'Status']
+                  ).map(label => (
+                    <th key={label} scope="col">{label}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {page.items.map(item => kind === 'applications' ? (
                   <tr key={item.id}>
-                    <td><Link to={`/applications/${item.id}`}>{item.name}</Link></td>
-                    <td>{portfolios.find(portfolio => portfolio.id === (item as Application).portfolioId)?.name ?? (item as Application).portfolioId}</td>
+                    <td>
+                      <Link to={`/applications/${item.id}`}>{item.name}</Link>
+                    </td>
+                    <td>
+                      {portfolios.find(portfolio => portfolio.id === (item as Application).portfolioId)?.name ?? (item as Application).portfolioId}
+                    </td>
                     <td>{(item as Application).criticality}</td>
                     <td>{(item as Application).tier}</td>
                     <td>{(item as Application).lifecycleStatus}</td>
@@ -181,7 +243,9 @@ export default function Reports({ user }: { user: User }) {
                   </tr>
                 ) : (
                   <tr key={item.id}>
-                    <td><Link to={`/portfolios/${item.id}`}>{item.name}</Link></td>
+                    <td>
+                      <Link to={`/portfolios/${item.id}`}>{item.name}</Link>
+                    </td>
                     <td>{(item as Portfolio).owner}</td>
                     <td>{item.productArea}</td>
                     <td>{(item as Portfolio).applicationCount}</td>
@@ -194,8 +258,20 @@ export default function Reports({ user }: { user: User }) {
           </div>
           <div className="pagination">
             <span>{page.offset + 1}–{page.offset + page.items.length} of {page.total}</span>
-            <button type="button" disabled={page.offset === 0} onClick={() => change('offset', String(Math.max(0, page.offset - page.limit)))}>Previous</button>
-            <button type="button" disabled={page.offset + page.limit >= page.total} onClick={() => change('offset', String(page.offset + page.limit))}>Next</button>
+            <button
+              type="button"
+              disabled={page.offset === 0}
+              onClick={() => change('offset', String(Math.max(0, page.offset - page.limit)))}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={page.offset + page.limit >= page.total}
+              onClick={() => change('offset', String(page.offset + page.limit))}
+            >
+              Next
+            </button>
           </div>
         </>
       ) : <p>No report results found.</p>)}

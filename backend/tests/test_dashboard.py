@@ -67,17 +67,29 @@ def test_exact_metrics_and_filters(context):
             {'id': str(empty), 'name': 'Empty', 'applicationCount': 0, 'qualityScore': None, 'applicationsAtRisk': 0},
         ],
     }
-    filtered = client.get('/api/dashboard/executive', headers=auth, params={'portfolioId': str(alpha)}).json()
+    response = client.get('/api/dashboard/executive', headers=auth, params={'portfolioId': str(alpha)})
+    assert response.status_code == 200
+    filtered = response.json()
     assert (filtered['totalPortfolios'], filtered['totalApplications'], filtered['enterpriseQualityScore'], filtered['applicationHealthScore'], filtered['automationMaturityScore']) == (1, 2, 81, 51, 21)
-    filtered = client.get('/api/dashboard/executive', headers=auth, params={'productArea': 'One'}).json()
+    response = client.get('/api/dashboard/executive', headers=auth, params={'productArea': 'One'})
+    assert response.status_code == 200
+    filtered = response.json()
     assert (filtered['totalPortfolios'], filtered['totalApplications'], filtered['enterpriseQualityScore'], filtered['openCriticalDefects']) == (2, 2, 50, 7)
-    filtered = client.get('/api/dashboard/executive', headers=auth, params={'riskLevel': 'Low'}).json()
+    response = client.get('/api/dashboard/executive', headers=auth, params={'riskLevel': 'Low'})
+    assert response.status_code == 200
+    filtered = response.json()
     assert (filtered['totalPortfolios'], filtered['totalApplications'], filtered['applicationsAtRisk']) == (1, 1, 0)
-    filtered = client.get('/api/dashboard/executive', headers=auth, params={'portfolioId': str(alpha), 'productArea': 'One', 'riskLevel': 'High'}).json()
+    response = client.get('/api/dashboard/executive', headers=auth, params={'portfolioId': str(alpha), 'productArea': 'One', 'riskLevel': 'High'})
+    assert response.status_code == 200
+    filtered = response.json()
     assert (filtered['enterpriseQualityScore'], filtered['openCriticalDefects'], filtered['applicationsAtRisk']) == (80, 2, 1)
-    filtered = client.get('/api/dashboard/executive', headers=auth, params={'productArea': 'missing'}).json()
+    response = client.get('/api/dashboard/executive', headers=auth, params={'productArea': 'missing'})
+    assert response.status_code == 200
+    filtered = response.json()
     assert filtered == {'enterpriseQualityScore': None, 'applicationHealthScore': None, 'automationMaturityScore': None, 'openCriticalDefects': 0, 'applicationsAtRisk': 0, 'totalApplications': 0, 'totalPortfolios': 0, 'portfolios': []}
-    filtered = client.get('/api/dashboard/executive', headers=auth, params={'portfolioId': str(empty)}).json()
+    response = client.get('/api/dashboard/executive', headers=auth, params={'portfolioId': str(empty)})
+    assert response.status_code == 200
+    filtered = response.json()
     assert filtered['totalPortfolios'] == 1 and filtered['enterpriseQualityScore'] is None
 
 
@@ -87,12 +99,18 @@ def test_authorization_scope_and_validation(context):
     assert client.get('/api/dashboard/executive').status_code == 401
     assert client.get('/api/dashboard/executive', headers={'Authorization': 'Bearer invalid'}).status_code == 401
     leader = login(client, 'leader')
-    result = client.get('/api/dashboard/executive', headers=leader).json()
+    response = client.get('/api/dashboard/executive', headers=leader)
+    assert response.status_code == 200
+    result = response.json()
     assert result['totalApplications'] == 2 and result['totalPortfolios'] == 1
     assert result['portfolios'][0]['id'] == str(alpha)
-    assert client.get('/api/dashboard/executive', headers=leader, params={'portfolioId': str(beta)}).json()['totalApplications'] == 0
+    response = client.get('/api/dashboard/executive', headers=leader, params={'portfolioId': str(beta)})
+    assert response.status_code == 200
+    assert response.json()['totalApplications'] == 0
     db.users.update_one({'role': 'Portfolio Leader'}, {'$set': {'portfolioAccess': []}})
-    assert client.get('/api/dashboard/executive', headers=leader).json()['totalPortfolios'] == 0
+    response = client.get('/api/dashboard/executive', headers=leader)
+    assert response.status_code == 200
+    assert response.json()['totalPortfolios'] == 0
     assert client.get('/api/dashboard/executive', headers=leader, params={'portfolioId': 'not-id'}).status_code == 422
     assert client.get('/api/dashboard/executive', headers=leader, params={'riskLevel': 'Critical'}).status_code == 422
     assert client.get('/api/dashboard/executive', headers=leader, params={'portfolioId': ''}).status_code == 422

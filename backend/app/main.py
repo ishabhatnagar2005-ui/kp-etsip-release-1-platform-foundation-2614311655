@@ -39,7 +39,13 @@ async def lifespan(app: FastAPI):
         await client.close()
 
 
-app = FastAPI(title="KP ETSIP Identity API", lifespan=lifespan)
+app = FastAPI(title="KP ETSIP Platform Foundation API", version="1.0.0", lifespan=lifespan)
+
+
+@app.get('/api/health', tags=['operations'])
+def health() -> dict[str, str]:
+    """Report process liveness without depending on database access."""
+    return {'status': 'ok'}
 app.add_middleware(CORSMiddleware, allow_origins=[origin.strip() for origin in Settings().cors_origins.split(",") if origin.strip()], allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Authorization", "Content-Type"])
 app.include_router(router)
 app.include_router(portfolio_router)

@@ -26,27 +26,43 @@ export default function Profile({ user, onUpdate, onSignedOut }: { user: User; o
       <p className="eyebrow">ACCOUNT SETTINGS</p>
       <h1>My Profile</h1>
       <p>Manage your account and how you start your work.</p>
-      {user.mustChangePassword && <p className="notice" role="status">Change your initial administrator password before accessing other features.</p>}
+      {user.mustChangePassword && (
+        <p className="notice" role="status">
+          Change your initial administrator password before accessing other features.
+        </p>
+      )}
       {error && <p className="error" role="alert">{error}</p>}
       {message && <p role="status">{message}</p>}
       <div className="profile-grid">
         <section className="card" aria-labelledby="identity-title">
           <h2 id="identity-title">Your identity</h2>
           <dl>
-            <dt>Name</dt><dd>{user.name}</dd>
-            <dt>Email</dt><dd>{user.email}</dd>
-            <dt>Role</dt><dd>{user.role}</dd>
-            <dt>Portfolio access</dt><dd>{user.portfolioAccess.length ? user.portfolioAccess.join(', ') : user.role === 'Portfolio Leader' ? 'No assigned portfolios' : 'All portfolios'}</dd>
+            <dt>Name</dt>
+            <dd>{user.name}</dd>
+            <dt>Email</dt>
+            <dd>{user.email}</dd>
+            <dt>Role</dt>
+            <dd>{user.role}</dd>
+            <dt>Portfolio access</dt>
+            <dd>
+              {user.portfolioAccess.length ? user.portfolioAccess.join(', ') : user.role === 'Portfolio Leader' ? 'No assigned portfolios' : 'All portfolios'}
+            </dd>
           </dl>
         </section>
         <div className="stack">
           <section className="card" aria-labelledby="preference-title">
             <h2 id="preference-title">Landing preference</h2>
-            <p>Choose where to start once inventory and dashboard features are available.</p>
+            <p>Choose where to start when you sign in.</p>
             <form onSubmit={save}>
               <label htmlFor="landing">Default landing page</label>
-              <select id="landing" value={landing ?? ''} onChange={event => setLanding((event.target.value || null) as User['defaultLandingPage'])}>
-                <option value="">Role default</option><option value="dashboard">Executive Dashboard</option><option value="applications">Application Repository</option>
+              <select
+                id="landing"
+                value={landing ?? ''}
+                onChange={event => setLanding((event.target.value || null) as User['defaultLandingPage'])}
+              >
+                <option value="">Role default</option>
+                <option value="dashboard">Executive Dashboard</option>
+                <option value="applications">Application Repository</option>
               </select>
               <button type="submit" disabled={busy}>Save preference</button>
             </form>
@@ -56,9 +72,27 @@ export default function Profile({ user, onUpdate, onSignedOut }: { user: User; o
             <p>Use at least 12 characters. You will need to sign in again.</p>
             <form onSubmit={password}>
               <label htmlFor="current">Current password</label>
-              <input id="current" type="password" autoComplete="current-password" required aria-required="true" value={current} onChange={event => setCurrent(event.target.value)} />
+              <input
+                id="current"
+                type="password"
+                autoComplete="current-password"
+                required
+                aria-required="true"
+                value={current}
+                onChange={event => setCurrent(event.target.value)}
+              />
               <label htmlFor="new">New password</label>
-              <input id="new" type="password" autoComplete="new-password" required aria-required="true" minLength={12} maxLength={72} value={next} onChange={event => setNext(event.target.value)} />
+              <input
+                id="new"
+                type="password"
+                autoComplete="new-password"
+                required
+                aria-required="true"
+                minLength={12}
+                maxLength={72}
+                value={next}
+                onChange={event => setNext(event.target.value)}
+              />
               <button type="submit" disabled={busy}>Change password</button>
             </form>
           </section>
