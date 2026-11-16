@@ -3,6 +3,7 @@ import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom';
 import Login from './auth/Login';
 import Profile from './auth/Profile';
 import { PortfolioDetail, PortfolioForm, PortfolioList } from './portfolios/Portfolios';
+import { ApplicationDetail, ApplicationForm, ApplicationList } from './applications/Applications';
 import { getMe, getToken, signOut } from './api';
 import type { User } from './types';
 
@@ -23,7 +24,7 @@ export default function App() {
     <BrowserRouter>
       <header className="header">
         <div className="header-inner"><span className="brand">KP ETSIP <span>Platform Foundation</span></span>{user && <button className="header-button" onClick={logout}>Sign out</button>}</div>
-        {user && !user.mustChangePassword && <nav className="main-nav" aria-label="Main navigation"><Link to="/portfolios">Portfolios</Link><Link to="/profile">My Profile</Link></nav>}
+        {user && !user.mustChangePassword && <nav className="main-nav" aria-label="Main navigation"><Link to="/portfolios">Portfolios</Link><Link to="/applications">Applications</Link><Link to="/profile">My Profile</Link></nav>}
       </header>
       {notice && <p className="page" role="status">{notice}</p>}
       <Routes>
@@ -33,6 +34,10 @@ export default function App() {
         <Route path="/portfolios/new" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <PortfolioForm user={user} />} />
         <Route path="/portfolios/:id" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <PortfolioDetail user={user} />} />
         <Route path="/portfolios/:id/edit" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <PortfolioForm user={user} edit />} />
+        <Route path="/applications" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <ApplicationList user={user} />} />
+        <Route path="/applications/new" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <ApplicationForm user={user} />} />
+        <Route path="/applications/:id" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <ApplicationDetail user={user} />} />
+        <Route path="/applications/:id/edit" element={!user ? <Navigate to="/login" replace /> : user.mustChangePassword ? <Navigate to="/profile" replace /> : <ApplicationForm user={user} edit />} />
         <Route path="*" element={<Navigate to={user ? '/profile' : '/login'} replace />} />
       </Routes>
     </BrowserRouter>

@@ -45,3 +45,5 @@ textarea { border:1px solid var(--outline); border-radius:4px; padding:12px; col
 textarea:focus-visible, a:focus-visible { outline:3px solid var(--primary-container); outline-offset:2px; }
 .linked-apps li { padding:16px 0; border-bottom:1px solid var(--outline-variant); }
 @media(max-width:767px) { .main-nav { padding:0 16px 16px; }.portfolio-heading { flex-direction:column; } }
+.application-field { display:flex; flex-direction:column; gap:8px; }
+.application-detail-row { display:contents; }
